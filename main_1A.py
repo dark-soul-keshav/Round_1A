@@ -10,7 +10,7 @@ from collections import Counter
 
 class pdf_outline_extractor:
 
-    def _init_(self, pdf_doc, max_heading_word_percentage=0.10):
+    def __init__(self, pdf_doc, max_heading_word_percentage=0.10): # Corrected __init__
 
         self.doc = pdf_doc
         self.max_heading_word_percent = max_heading_word_percentage
@@ -35,19 +35,19 @@ class pdf_outline_extractor:
 
     def _get_underline_bboxes(self):
         self.underline_bboxes = {}
-        for page in range(self.doc.page_count):
-            self.underline_bboxes[page + 1] = []
-            drawings = self.doc[page].get_drawings()
+        for page_idx in range(self.doc.page_count): # Renamed loop variable to avoid conflict
+            self.underline_bboxes[page_idx + 1] = []
+            drawings = self.doc[page_idx].get_drawings()
             for path in drawings:
 
                 if path['rect'].height < 2 and path['rect'].width > 5:
-                    self.underline_bboxes[page + 1].append(path['rect'])
+                    self.underline_bboxes[page_idx + 1].append(path['rect'])
 
     def step_1_extract_features(self):
         header_footer_candidates = Counter()
         page_count = self.doc.page_count
-        for page in range(page_count):
-            page = self.doc[page]
+        for page_idx in range(page_count): # Renamed loop variable
+            page = self.doc[page_idx] # Changed page_num to page for clarity as it's a PyMuPDF page object
             self.total_words_in_doc += len(page.get_text("words"))
             page_height = page.rect.height
             page_width = page.rect.width
@@ -79,7 +79,7 @@ class pdf_outline_extractor:
 
                     is_underlined = False
                     line_bbox = pymupdf.Rect(line_step1["bbox"])
-                    for u_bbox in self.underline_bboxes.get(page + 1, []):
+                    for u_bbox in self.underline_bboxes.get(page_idx + 1, []): # Use page_idx
 
                         if abs(u_bbox.y0 - line_bbox.y1) < 2 and \
                                 max(line_bbox.x0, u_bbox.x0) < min(line_bbox.x1, u_bbox.x1):
@@ -92,7 +92,7 @@ class pdf_outline_extractor:
                         "font_name": main_span["font"],
                         "color": main_span["color"],
                         "alignment": self.get_text_alignment(line_step1["bbox"], page_width),
-                        "page": page + 1,
+                        "page_num": page_idx + 1, # Changed to page_num
                         "y_coord": line_step1["bbox"][1],
                         "length": len(line_text),
                         "is_underlined": is_underlined
@@ -227,7 +227,7 @@ class pdf_outline_extractor:
 
             heading_word_count, heading_percent = get_heading_stats(final_headings)
 
-        final_headings.sort(key=lambda x: (x["page"], x["y_coord"]))
+        final_headings.sort(key=lambda x: (x["page_num"], x["y_coord"])) # Changed to page_num
         return final_headings
 
     def step_5_enforce_hierarchy(self, headings):
@@ -269,7 +269,7 @@ class pdf_outline_extractor:
             actual_vertical_distance = current_heading['y_coord'] - last_heading['y_coord']
 
             if (current_heading['level'] == last_heading['level'] and
-                    current_heading['page'] == last_heading['page'] and
+                    current_heading['page_num'] == last_heading['page_num'] and # Changed to page_num
                     actual_vertical_distance < vertical_threshold):
 
                 last_heading['text'] += ' ' + current_heading['text']
@@ -296,7 +296,7 @@ class pdf_outline_extractor:
         final_headings = self.step_6_merge_consecutive_headings(hierarchical_headings)
 
         outline = [
-            {"level": h["level"], "text": h["text"], "page": h["page"]}
+            {"level": h["level"], "text": h["text"], "page_num": h["page_num"]} # Changed to page_num
             for h in final_headings
         ]
         return outline
@@ -324,7 +324,7 @@ for pdf_name in os.listdir(input_dir):
 
         if output_data['title'] == "No title found":
             if pdf.page_count > 0:
-                page = pdf[0]
+                page = pdf[0] # Renamed page_num to page for clarity
 
                 top_zone = pymupdf.Rect(page.rect.x0, page.rect.y0, page.rect.x1, page.rect.height * 0.10)
                 page_area = page.rect.width * page.rect.height
@@ -332,7 +332,7 @@ for pdf_name in os.listdir(input_dir):
                 has_large_image_at_top = any(
                     (pymupdf.Rect(img['bbox']).intersects(top_zone)) and
                     ((pymupdf.Rect(img['bbox']).width * pymupdf.Rect(img['bbox']).height / page_area) >= 0.50) and (
-                            (pymupdf.Rect(img['bbox']).width * pymupdf.Rect(img['bbox']).height / page_area) < 0.97)
+                                (pymupdf.Rect(img['bbox']).width * pymupdf.Rect(img['bbox']).height / page_area) < 0.97)
                     for img in page.get_image_info()
                 )
 
@@ -462,11 +462,11 @@ for pdf_name in os.listdir(input_dir):
             outline_method = "toc"
 
             for entry in toc:
-                level, title, page = entry
+                level, title, page_num = entry # Changed 'page' to 'page_num' to match desired output
                 outline_pdf = {
                     "level": f"H{level}",
                     "text": title,
-                    "page": page,
+                    "page_num": page_num, # Changed to page_num
                 }
 
                 output_data["outline"].append(outline_pdf)
@@ -483,7 +483,7 @@ for pdf_name in os.listdir(input_dir):
             json.dump(output_data, json_output, indent=4)
 
         print("successfully creates output.json")
-
+        
         # if method_title == "metadata":
         #     feedback_title = input(" Type satisfied/not satisfied for title ")
         #     if feedback_title == "satisfied":
