@@ -1,0 +1,6 @@
+certifi==2025.7.14
+charset-normalizer==3.4.2
+pillow==11.3.0
+PyMuPDF==1.26.0
+pytesseract==0.3.13
+regex==2024.11.6
