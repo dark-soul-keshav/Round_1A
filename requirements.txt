@@ -4,3 +4,4 @@ pillow==11.3.0
 PyMuPDF==1.26.0
 pytesseract==0.3.13
 regex==2024.11.6
+pandas==2.2.2
