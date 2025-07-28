@@ -10,7 +10,7 @@ from collections import Counter
 
 class pdf_outline_extractor:
 
-    def __init__(self, pdf_doc, max_heading_word_percentage=0.10):
+    def _init_(self, pdf_doc, max_heading_word_percentage=0.10):
 
         self.doc = pdf_doc
         self.max_heading_word_percent = max_heading_word_percentage
@@ -35,19 +35,19 @@ class pdf_outline_extractor:
 
     def _get_underline_bboxes(self):
         self.underline_bboxes = {}
-        for page_num in range(self.doc.page_count):
-            self.underline_bboxes[page_num + 1] = []
-            drawings = self.doc[page_num].get_drawings()
+        for page in range(self.doc.page_count):
+            self.underline_bboxes[page + 1] = []
+            drawings = self.doc[page].get_drawings()
             for path in drawings:
 
                 if path['rect'].height < 2 and path['rect'].width > 5:
-                    self.underline_bboxes[page_num + 1].append(path['rect'])
+                    self.underline_bboxes[page + 1].append(path['rect'])
 
     def step_1_extract_features(self):
         header_footer_candidates = Counter()
         page_count = self.doc.page_count
-        for page_num in range(page_count):
-            page = self.doc[page_num]
+        for page in range(page_count):
+            page = self.doc[page]
             self.total_words_in_doc += len(page.get_text("words"))
             page_height = page.rect.height
             page_width = page.rect.width
@@ -79,7 +79,7 @@ class pdf_outline_extractor:
 
                     is_underlined = False
                     line_bbox = pymupdf.Rect(line_step1["bbox"])
-                    for u_bbox in self.underline_bboxes.get(page_num + 1, []):
+                    for u_bbox in self.underline_bboxes.get(page + 1, []):
 
                         if abs(u_bbox.y0 - line_bbox.y1) < 2 and \
                                 max(line_bbox.x0, u_bbox.x0) < min(line_bbox.x1, u_bbox.x1):
@@ -92,7 +92,7 @@ class pdf_outline_extractor:
                         "font_name": main_span["font"],
                         "color": main_span["color"],
                         "alignment": self.get_text_alignment(line_step1["bbox"], page_width),
-                        "page_num": page_num + 1,
+                        "page": page + 1,
                         "y_coord": line_step1["bbox"][1],
                         "length": len(line_text),
                         "is_underlined": is_underlined
@@ -227,7 +227,7 @@ class pdf_outline_extractor:
 
             heading_word_count, heading_percent = get_heading_stats(final_headings)
 
-        final_headings.sort(key=lambda x: (x["page_num"], x["y_coord"]))
+        final_headings.sort(key=lambda x: (x["page"], x["y_coord"]))
         return final_headings
 
     def step_5_enforce_hierarchy(self, headings):
@@ -269,7 +269,7 @@ class pdf_outline_extractor:
             actual_vertical_distance = current_heading['y_coord'] - last_heading['y_coord']
 
             if (current_heading['level'] == last_heading['level'] and
-                    current_heading['page_num'] == last_heading['page_num'] and
+                    current_heading['page'] == last_heading['page'] and
                     actual_vertical_distance < vertical_threshold):
 
                 last_heading['text'] += ' ' + current_heading['text']
@@ -296,7 +296,7 @@ class pdf_outline_extractor:
         final_headings = self.step_6_merge_consecutive_headings(hierarchical_headings)
 
         outline = [
-            {"level": h["level"], "text": h["text"], "page": h["page_num"]}
+            {"level": h["level"], "text": h["text"], "page": h["page"]}
             for h in final_headings
         ]
         return outline
@@ -462,11 +462,11 @@ for pdf_name in os.listdir(input_dir):
             outline_method = "toc"
 
             for entry in toc:
-                level, title, page_num = entry
+                level, title, page = entry
                 outline_pdf = {
                     "level": f"H{level}",
                     "text": title,
-                    "page": page_num,
+                    "page": page,
                 }
 
                 output_data["outline"].append(outline_pdf)
