@@ -466,7 +466,7 @@ for pdf_name in os.listdir(input_dir):
                 outline_pdf = {
                     "level": f"H{level}",
                     "text": title,
-                    "page_num": page_num,
+                    "page": page_num,
                 }
 
                 output_data["outline"].append(outline_pdf)
